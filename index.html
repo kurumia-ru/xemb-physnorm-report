@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ロボット間で共通の正規化</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #111; color: #eee; line-height: 1.6; }
+    h1 { font-size: 28px; margin-bottom: 8px; }
+    h2 { font-size: 22px; margin: 32px 0 8px; border-bottom: 1px solid #444; padding-bottom: 4px; }
+    p, li { max-width: 920px; }
+    table { border-collapse: collapse; margin: 8px 0 16px; }
+    th, td { border: 1px solid #444; padding: 6px 10px; text-align: left; }
+    th { background: #222; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    code { background: #222; padding: 1px 4px; border-radius: 3px; }
+    .bad { color: #f88; }
+    .ok { color: #8f8; }
+    .note { color: #aaa; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>ロボット間で共通の正規化（案 3）</h1>
+  <p>Franka（A）と UR5e（B）の LoRA を、タスクにもロボットにもよらない 1 つの正規化で学習し直します。データを使わず、物理的な範囲で −1〜1 を決めます。2026-11-02 時点の内容です。</p>
+
+  <h2>なぜ変えるか</h2>
+  <p>openpi の pi0.5 は、学習したデータセットの分位点で状態と行動を −1〜1 に写します。<code>(x − q01) / (q99 − q01) × 2 − 1</code> です。いままでは「学習したタスクのデモ」の分位点だったので、ロボットをまたぐと UR5e の状態を Franka の範囲で写すことになっていました。</p>
+  <table>
+    <tr><th>状態</th><th>Franka のデモ</th><th>UR5e の値</th><th>Franka の範囲で写すと</th></tr>
+    <tr><td>姿勢の軸角 x</td><td class="num">+3.125〜+3.148</td><td class="num">約 −3.14</td><td class="num bad">約 −540</td></tr>
+    <tr><td>グリッパ関節 1 本目（全開）</td><td class="num">0.031〜0.040</td><td class="num">−0.028</td><td class="num bad">約 −15</td></tr>
+    <tr><td>グリッパ関節 2 本目（全開）</td><td class="num">−0.040〜−0.031</td><td class="num">−0.278</td><td class="num bad">約 −55</td></tr>
+  </table>
+  <p>学習で見ていたのは −1〜1 付近です。軸角は、物理的にはほぼ同じ真下向きなのに、書き方の違いで符号が反転しています。グリッパは、Franka が開くと値が大きくなるのに対し、UR5e は閉じると大きくなり、向きも逆です。ロボットごとに統計を取る方法だと、同じ正規化値がロボットによって別の動きを意味してしまうので、両ロボット共通の物理範囲にします。</p>
+
+  <h2>正規化の条件</h2>
+  <p><b>1. 状態の表し方を揃える</b>（正規化の前に、学習データと推論の両方で同じ関数を通す）</p>
+  <table>
+    <tr><th>次元</th><th>いままで</th><th>新しい表し方</th></tr>
+    <tr><td>1〜3</td><td>手先位置 (m)</td><td>手先位置 (m)、そのまま</td></tr>
+    <tr><td>4〜6</td><td>手先姿勢の軸角</td><td>真下向き（x 軸まわり π）からのずれの回転ベクトル</td></tr>
+    <tr><td>7〜8</td><td>グリッパ関節の先頭 2 本</td><td>閉じ具合 0（全開）〜1（全閉）を 2 回。Franka は 1 − 指の幅 / 0.08 m、UR5e は Robotiq 関節 / 0.8</td></tr>
+  </table>
+  <p><b>2. 両ロボット共通の範囲で −1〜1 に写す</b></p>
+  <table>
+    <tr><th>量</th><th>−1</th><th>+1</th><th>決め方</th></tr>
+    <tr><td>手先 x</td><td class="num">−0.31 m</td><td class="num">0.26 m</td><td rowspan="2">LIBERO-Object 全 10 タスク・各 50 配置で、物体とカゴの中心は x −0.21〜0.16、y −0.245〜0.275。これに 10 cm の余白</td></tr>
+    <tr><td>手先 y</td><td class="num">−0.345 m</td><td class="num">0.375 m</td></tr>
+    <tr><td>手先 z</td><td class="num">0 m</td><td class="num">0.45 m</td><td>テーブル面から。初期の手先は 0.22〜0.30 m</td></tr>
+    <tr><td>姿勢のずれ</td><td class="num">−0.5 rad</td><td class="num">0.5 rad</td><td>真下向きのまわり</td></tr>
+    <tr><td>グリッパ閉じ具合</td><td class="num">0</td><td class="num">1</td><td>全開〜全閉</td></tr>
+    <tr><td>行動 7 次元</td><td class="num">−1</td><td class="num">1</td><td>OSC コントローラが切る範囲。移動は 1 で 5 cm。グリッパは −1 で開、+1 で閉</td></tr>
+  </table>
+  <p class="note">範囲はシーンの設定とロボットの仕様だけから決めていて、デモは使っていません。そのため、評価タスクのデモが正規化に入るリークは起きません。4 本の LoRA はすべて同じ <code>norm_stats.json</code> で学習します。</p>
+
+  <h2>確認したこと</h2>
+  <p><b>4 つの学習データを新しい正規化で写した範囲</b>（各 50 本、7000 フレーム）</p>
+  <table>
+    <tr><th>データ</th><th>位置 x</th><th>位置 y</th><th>位置 z</th><th>姿勢 3 成分</th><th>グリッパ</th></tr>
+    <tr><td>Franka スープ（A0）</td><td class="num">−0.47〜0.16</td><td class="num">−0.72〜0.74</td><td class="num">−0.72〜0.20</td><td class="num">−0.17〜0.02</td><td class="num">−0.99〜−0.56</td></tr>
+    <tr><td>Franka ドレッシング（A2）</td><td class="num">−0.46〜0.31</td><td class="num">−0.33〜0.74</td><td class="num">−0.43〜0.47</td><td class="num">−0.23〜0.03</td><td class="num">−0.99〜0.08</td></tr>
+    <tr><td>UR5e スープ（B0）</td><td class="num">−0.90〜0.16</td><td class="num">−0.75〜0.74</td><td class="num">−0.76〜0.17</td><td class="num">−0.20〜0.11</td><td class="num">−1.08〜−0.14</td></tr>
+    <tr><td>UR5e ドレッシング（B2）</td><td class="num">−0.90〜0.33</td><td class="num">−0.34〜0.75</td><td class="num">−0.48〜0.52</td><td class="num">−0.24〜0.12</td><td class="num">−1.08〜0.14</td></tr>
+  </table>
+  <p>どれもほぼ −1〜1 に収まりました。UR5e の Robotiq は全開でも関節が少しマイナスに入るので、−1.08 になります。</p>
+  <p><b>ほぼ同じ姿勢で全開のときの、正規化後の状態</b></p>
+  <table>
+    <tr><th></th><th>位置</th><th>姿勢</th><th>グリッパ</th></tr>
+    <tr><td>Franka</td><td class="num">−0.088, −0.042, 0.111</td><td class="num">−0.003, −0.111, −0.001</td><td class="num">−0.95</td></tr>
+    <tr><td>UR5e</td><td class="num">−0.088, −0.042, 0.111</td><td class="num">0.000, −0.084, 0.098</td><td class="num">−1.07</td></tr>
+  </table>
+  <p class="ok">前は UR5e だけ約 −540 まで外れていましたが、両ロボットでほぼ同じ値になりました。</p>
+  <ul>
+    <li>学習データに入れた状態と、推論サーバで同じ関数を通した状態は完全に一致しました（差 0.0）。</li>
+    <li>推論サーバは、新しい設定で起動できることを CPU 上で確認しました。</li>
+  </ul>
+
+  <h2>実験の進め方</h2>
+  <p>正規化は学習の一部なので、LoRA は学習し直しになります。1 本ずつ進めます。</p>
+  <table>
+    <tr><th>順</th><th>内容</th><th>前回（タスクごとの正規化）</th><th>状況</th></tr>
+    <tr><td>1</td><td>A0（Franka スープ）を新しい正規化で学習し直す。pi05_base から 1 万ステップ、LoRA r=16、デモ 50 本</td><td>—</td><td>GPU が空くのを待っている</td></tr>
+    <tr><td>2</td><td>A0 → A0（Oracle）。新しい正規化でも学習できているかの確認</td><td class="num">36/50</td><td>未</td></tr>
+    <tr><td>3</td><td>A0 → B0（ロボットをまたぐ）。UR5e でスープ</td><td class="num">0/50（持ち上げ 0）</td><td>未</td></tr>
+    <tr><td>4</td><td>結果を見て B0 か A2 に進む</td><td></td><td></td></tr>
+  </table>
+  <p class="note">評価は前回と同じ条件です。50 配置、seed 7、300 ステップ（15 秒）で、成功は公式のカゴ領域判定です。全エピソードの動画を保存します。</p>
+</body>
+</html>
