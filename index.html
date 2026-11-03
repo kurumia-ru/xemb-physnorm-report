@@ -5,125 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ロボット間で共通の正規化</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 24px; background: #111; color: #eee; line-height: 1.6; }
-    h1 { font-size: 28px; margin-bottom: 8px; }
-    h2 { font-size: 22px; margin: 32px 0 8px; border-bottom: 1px solid #444; padding-bottom: 4px; }
-    p, li { max-width: 920px; }
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #111; color: #eee; line-height: 1.55; }
+    h1 { font-size: 26px; margin-bottom: 8px; }
+    h2 { font-size: 20px; margin: 28px 0 8px; border-bottom: 1px solid #444; padding-bottom: 4px; }
+    p, li { max-width: 820px; }
     table { border-collapse: collapse; margin: 8px 0 16px; }
     th, td { border: 1px solid #444; padding: 6px 10px; text-align: left; }
     th { background: #222; }
     td.num { text-align: right; font-variant-numeric: tabular-nums; }
     code { background: #222; padding: 1px 4px; border-radius: 3px; }
     .bad { color: #f88; }
-    .ok { color: #8f8; }
     .note { color: #aaa; font-size: 14px; }
     .grid { display: flex; flex-wrap: wrap; gap: 20px; }
     figure { margin: 0; width: 320px; }
     video { width: 320px; height: 320px; background: #000; display: block; }
-    figcaption { font-size: 15px; margin-top: 8px; }
+    figcaption { font-size: 14px; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <h1>ロボット間で共通の正規化（案 3）</h1>
-  <p>Franka（A）と UR5e（B）で、タスクにもロボットにもよらない 1 つの正規化を使います。A0（Franka スープ）を学習し直し、A0→A0 と A0→B0 を評価しました。動画は 50 配置・seed 7・300 ステップの公式評価そのものです。2026-11-03 時点。</p>
+  <h1>ロボット間で共通の正規化</h1>
+  <p>A は Franka、B は UR5e、0 はスープ。状態をロボット間で揃えて A0 を学習し直した。50 配置・seed 7・300 ステップの公式評価。2026-11-03。</p>
 
   <h2>結果</h2>
   <table>
-    <tr><th>評価</th><th>やるべきタスク</th><th>新しい正規化</th><th>前回（タスクごとの正規化）</th></tr>
-    <tr><td>A0 → A0</td><td>Franka でアルファベットスープをカゴに入れる</td><td class="num">34/50</td><td class="num">36/50</td></tr>
-    <tr><td>A0 → B0</td><td>UR5e でアルファベットスープをカゴに入れる</td><td class="num bad">判定 1/50、実質 0/50（持ち上げ 0）</td><td class="num bad">0/50（持ち上げ 0）</td></tr>
+    <tr><th></th><th>やるべきタスク</th><th>新しい正規化</th><th>前回</th></tr>
+    <tr><td>A0 → A0</td><td>Franka でスープをカゴへ</td><td class="num">34/50</td><td class="num">36/50</td></tr>
+    <tr><td>A0 → B0</td><td>UR5e でスープをカゴへ</td><td class="num bad">実質 0/50</td><td class="num bad">0/50</td></tr>
   </table>
-  <p>学習は pi0.5 のベース重みから LoRA、1 万ステップ、デモ 50 本です。評価は公式のカゴ領域判定です。A0→B0 の 1 件は、缶が元の場所に残っているのに原点付近と記録されて成功になっています。50 回すべて缶を持ち上げていません。</p>
-  <p>Franka 自身の性能はほぼ同じです。状態の数値をロボット間で揃えても、UR5e での動きは変わりませんでした。</p>
+  <p>同じロボットでは前回どおり動く。ロボットを変えると、前回と同じく腕が右へ飛んで缶に届かない。判定 1/50 は誤作動（缶は元の場所、持ち上げは 50 回とも 0）。</p>
 
-  <h2>動画　A0 → A0（Franka の重みを Franka で）　34/50</h2>
-  <p>やるべきタスクは、Franka で<b>アルファベットスープ</b>をカゴに入れることです。重みは Franka スープを新しい正規化で学習したものです。</p>
+  <h2>なぜ正規化しても右へ飛んだか</h2>
+  <p>直したのは状態の数字だけ。以前は UR5e の真下向きが Franka の統計で約 −540 になっていた。今回は同じ姿勢なら両ロボットとも −1〜1 に入る。それでも A0→B0 の動きは変わらなかった。</p>
+  <p>だから失敗の原因は、状態のスケールではない。モデルは画像も見ている。学習時の腕は白い Franka、推論時は青い UR5e で、形も色も違う。最初から缶と反対の右へ大きく動くので、指令そのものがおかしい。同じ指令なのに 2 台で手が少し違う、という話でもない。</p>
+  <p>つかんだときのグリッパ値の差（Franka 約 −0.56、UR5e 約 −0.14）も、今回は関係ない。缶まで行っていない。</p>
+
+  <h2>動画</h2>
+  <p>公式評価から 4 本。やるべきタスクはどれもスープをカゴに入れること。重みは Franka スープ。</p>
   <div class="grid">
     <figure>
       <video src="A0_on_A0_init00.mp4" controls autoplay muted loop playsinline></video>
-      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきタスク：Franka で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：スープをつかんで 19.6 cm 持ち上げ、カゴに入れます。5.7 秒。</figcaption>
+      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：つかんでカゴへ。5.7 秒。</figcaption>
     </figure>
     <figure>
       <video src="A0_on_A0_init02.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → A0　init 2　失敗</b><br>やるべきタスク：Franka で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：右の<b>ケチャップ</b>に手を伸ばして倒します。スープは動いていません。持ち上げ 1.1 cm。15 秒。</figcaption>
+      <figcaption><b>A0 → A0　init 2　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：ケチャップを倒す。スープは動かない。</figcaption>
     </figure>
     <figure>
-      <video src="A0_on_A0_init26.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → A0　init 26　失敗</b><br>やるべきタスク：Franka で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：やはり<b>ケチャップ</b>を倒して止まります。手はスープに近づいていません。持ち上げ 1.2 cm。15 秒。</figcaption>
-    </figure>
-  </div>
-
-  <h2>動画　A0 → B0（Franka の重みを UR5e で）　実質 0/50</h2>
-  <p>やるべきタスクは、UR5e で<b>アルファベットスープ</b>をカゴに入れることです。重みは上と同じ Franka スープです。3 本とも腕が右へ振れて画面の外へ出ていき、スープには触れていません。</p>
-  <div class="grid">
-    <figure>
-      <video src="A0_on_B0_init00.mp4" controls autoplay muted loop playsinline></video>
-      <figcaption><b>A0 → B0　init 0　失敗</b><br>やるべきタスク：UR5e で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：腕は右へ振れて画面の外へ出ます。缶は元の場所のまま。持ち上げ 0。15 秒。</figcaption>
-    </figure>
-    <figure>
-      <video src="A0_on_B0_init01.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → B0　init 1　失敗</b><br>やるべきタスク：UR5e で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：init 0 と同じく、腕が右へ振れて外へ出ます。缶には触れていません。持ち上げ 0。15 秒。</figcaption>
+      <video src="A0_on_B0_init00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 0　失敗</b><br>やるべきタスク：UR5e でスープ。<br>実際：腕が右へ画面外へ。缶に触れない。</figcaption>
     </figure>
     <figure>
       <video src="A0_on_B0_init17.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → B0　init 17　判定上は成功、実際は失敗</b><br>やるべきタスク：UR5e で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：腕は右へ振れて外へ出ます。缶は元の場所に残っています。記録上は缶が原点付近になったため成功判定が立ち、5.7 秒で止まっています。持ち上げ 0。</figcaption>
+      <figcaption><b>A0 → B0　init 17　判定だけ成功</b><br>やるべきタスク：UR5e でスープ。<br>実際：init 0 と同じ。缶は元の場所。</figcaption>
     </figure>
   </div>
 
-  <h2>なぜ変えるか</h2>
-  <p>openpi の pi0.5 は、学習したデータセットの分位点で状態と行動を −1〜1 に写します。<code>(x − q01) / (q99 − q01) × 2 − 1</code> です。いままでは「学習したタスクのデモ」の分位点だったので、ロボットをまたぐと UR5e の状態を Franka の範囲で写すことになっていました。</p>
-  <table>
-    <tr><th>状態</th><th>Franka のデモ</th><th>UR5e の値</th><th>Franka の範囲で写すと</th></tr>
-    <tr><td>姿勢の軸角 x</td><td class="num">+3.125〜+3.148</td><td class="num">約 −3.14</td><td class="num bad">約 −540</td></tr>
-    <tr><td>グリッパ関節 1 本目（全開）</td><td class="num">0.031〜0.040</td><td class="num">−0.028</td><td class="num bad">約 −15</td></tr>
-    <tr><td>グリッパ関節 2 本目（全開）</td><td class="num">−0.040〜−0.031</td><td class="num">−0.278</td><td class="num bad">約 −55</td></tr>
-  </table>
-  <p>学習で見ていたのは −1〜1 付近です。軸角は、物理的にはほぼ同じ真下向きなのに、書き方の違いで符号が反転しています。グリッパは、Franka が開くと値が大きくなるのに対し、UR5e は閉じると大きくなり、向きも逆です。ロボットごとに統計を取る方法だと、同じ正規化値がロボットによって別の動きを意味してしまうので、両ロボット共通の物理範囲にします。</p>
-
   <h2>正規化の条件</h2>
-  <p><b>1. 状態の表し方を揃える</b>（正規化の前に、学習データと推論の両方で同じ関数を通す）</p>
+  <p>デモは使っていない。シーンの配置とロボットの仕様だけ。学習と推論で同じ関数。</p>
   <table>
-    <tr><th>次元</th><th>いままで</th><th>新しい表し方</th></tr>
-    <tr><td>1〜3</td><td>手先位置 (m)</td><td>手先位置 (m)、そのまま</td></tr>
-    <tr><td>4〜6</td><td>手先姿勢の軸角</td><td>真下向き（x 軸まわり π）からのずれの回転ベクトル</td></tr>
-    <tr><td>7〜8</td><td>グリッパ関節の先頭 2 本</td><td>閉じ具合 0（全開）〜1（全閉）を 2 回。Franka は 1 − 指の幅 / 0.08 m、UR5e は Robotiq 関節 / 0.8</td></tr>
+    <tr><th></th><th>表し方</th><th>−1</th><th>+1</th></tr>
+    <tr><td>位置 xyz</td><td>メートルのまま</td><td class="num">−0.31, −0.345, 0</td><td class="num">0.26, 0.375, 0.45</td></tr>
+    <tr><td>姿勢</td><td>真下（x 軸 π）からのずれ</td><td class="num">−0.5 rad</td><td class="num">0.5 rad</td></tr>
+    <tr><td>グリッパ</td><td>閉じ具合 0〜1 を 2 回。Franka は 1−幅/0.08、UR5e は関節/0.8</td><td class="num">全開</td><td class="num">全閉</td></tr>
+    <tr><td>行動 7D</td><td>OSC。1 で 5 cm。グリッパ −1 開 / +1 閉</td><td class="num">−1</td><td class="num">1</td></tr>
   </table>
-  <p><b>2. 両ロボット共通の範囲で −1〜1 に写す</b></p>
-  <table>
-    <tr><th>量</th><th>−1</th><th>+1</th><th>決め方</th></tr>
-    <tr><td>手先 x</td><td class="num">−0.31 m</td><td class="num">0.26 m</td><td rowspan="2">LIBERO-Object 全 10 タスク・各 50 配置で、物体とカゴの中心は x −0.21〜0.16、y −0.245〜0.275。これに 10 cm の余白</td></tr>
-    <tr><td>手先 y</td><td class="num">−0.345 m</td><td class="num">0.375 m</td></tr>
-    <tr><td>手先 z</td><td class="num">0 m</td><td class="num">0.45 m</td><td>テーブル面から。初期の手先は 0.22〜0.30 m</td></tr>
-    <tr><td>姿勢のずれ</td><td class="num">−0.5 rad</td><td class="num">0.5 rad</td><td>真下向きのまわり</td></tr>
-    <tr><td>グリッパ閉じ具合</td><td class="num">0</td><td class="num">1</td><td>全開〜全閉</td></tr>
-    <tr><td>行動 7 次元</td><td class="num">−1</td><td class="num">1</td><td>OSC コントローラが切る範囲。移動は 1 で 5 cm。グリッパは −1 で開、+1 で閉</td></tr>
-  </table>
-  <p class="note">範囲はシーンの設定とロボットの仕様だけから決めていて、デモは使っていません。そのため、評価タスクのデモが正規化に入るリークは起きません。A0 の LoRA も、これから学習する LoRA も、同じ <code>norm_stats.json</code> を使います。ガウシアンノイズは入れていません。</p>
-  <p>マイナスの正規化値は、範囲が −1〜1 なので普通に出ます。UR5e の全開は Robotiq の関節が少しマイナスに入るため −1.08 になります。openpi はクリップしないので、このまま通しています。つかんだときの閉じ具合はロボットで違います（Franka のスープ約 −0.56、UR5e 約 −0.14）。グリッパの形の違いで、正規化では揃えません。</p>
-
-  <h2>確認したこと</h2>
-  <p><b>4 つの学習データを新しい正規化で写した範囲</b>（各 50 本、7000 フレーム）</p>
-  <table>
-    <tr><th>データ</th><th>位置 x</th><th>位置 y</th><th>位置 z</th><th>姿勢 3 成分</th><th>グリッパ</th></tr>
-    <tr><td>Franka スープ（A0）</td><td class="num">−0.47〜0.16</td><td class="num">−0.72〜0.74</td><td class="num">−0.72〜0.20</td><td class="num">−0.17〜0.02</td><td class="num">−0.99〜−0.56</td></tr>
-    <tr><td>Franka ドレッシング（A2）</td><td class="num">−0.46〜0.31</td><td class="num">−0.33〜0.74</td><td class="num">−0.43〜0.47</td><td class="num">−0.23〜0.03</td><td class="num">−0.99〜0.08</td></tr>
-    <tr><td>UR5e スープ（B0）</td><td class="num">−0.90〜0.16</td><td class="num">−0.75〜0.74</td><td class="num">−0.76〜0.17</td><td class="num">−0.20〜0.11</td><td class="num">−1.08〜−0.14</td></tr>
-    <tr><td>UR5e ドレッシング（B2）</td><td class="num">−0.90〜0.33</td><td class="num">−0.34〜0.75</td><td class="num">−0.48〜0.52</td><td class="num">−0.24〜0.12</td><td class="num">−1.08〜0.14</td></tr>
-  </table>
-  <p>どれもほぼ −1〜1 に収まりました。UR5e の Robotiq は全開でも関節が少しマイナスに入るので、−1.08 になります。</p>
-  <p><b>ほぼ同じ姿勢で全開のときの、正規化後の状態</b></p>
-  <table>
-    <tr><th></th><th>位置</th><th>姿勢</th><th>グリッパ</th></tr>
-    <tr><td>Franka</td><td class="num">−0.088, −0.042, 0.111</td><td class="num">−0.003, −0.111, −0.001</td><td class="num">−0.95</td></tr>
-    <tr><td>UR5e</td><td class="num">−0.088, −0.042, 0.111</td><td class="num">0.000, −0.084, 0.098</td><td class="num">−1.07</td></tr>
-  </table>
-  <p class="ok">前は UR5e だけ約 −540 まで外れていましたが、両ロボットでほぼ同じ値になりました。</p>
-  <ul>
-    <li>学習データに入れた状態と、推論サーバで同じ関数を通した状態は完全に一致しました（差 0.0）。</li>
-    <li>A0→A0 の最初の評価は、Franka の評価から届く状態が読み取り専用で落ちました。配列をコピーしてから正規化に渡すよう直し、同じ 50 配置で取り直した結果が上の 34/50 です。正規化の範囲と写し方は変えていません。</li>
-  </ul>
-
-  <h2>次</h2>
-  <p>B0 や A2 の学習にはまだ進んでいません。状態の数値を揃えても A0→B0 は動かなかったので、失敗の主な原因は画像の見た目の違い（腕の形や色）か、同じ動作指令でも 2 台で手の動きが違うことのどちらかだと考えています。</p>
+  <p class="note">位置の範囲は LIBERO-Object 全 10 タスク×50 配置の物体・カゴ中心に 10 cm 余白。リークなし。ガウシアンノイズなし。</p>
 </body>
 </html>
