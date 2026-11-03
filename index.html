@@ -17,11 +17,58 @@
     .bad { color: #f88; }
     .ok { color: #8f8; }
     .note { color: #aaa; font-size: 14px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 20px; }
+    figure { margin: 0; width: 320px; }
+    video { width: 320px; height: 320px; background: #000; display: block; }
+    figcaption { font-size: 15px; margin-top: 8px; }
   </style>
 </head>
 <body>
   <h1>ロボット間で共通の正規化（案 3）</h1>
-  <p>Franka（A）と UR5e（B）の LoRA を、タスクにもロボットにもよらない 1 つの正規化で学習し直します。データを使わず、物理的な範囲で −1〜1 を決めます。2026-11-02 時点の内容です。</p>
+  <p>Franka（A）と UR5e（B）で、タスクにもロボットにもよらない 1 つの正規化を使います。A0（Franka スープ）を学習し直し、A0→A0 と A0→B0 を評価しました。動画は 50 配置・seed 7・300 ステップの公式評価そのものです。2026-11-03 時点。</p>
+
+  <h2>結果</h2>
+  <table>
+    <tr><th>評価</th><th>やるべきタスク</th><th>新しい正規化</th><th>前回（タスクごとの正規化）</th></tr>
+    <tr><td>A0 → A0</td><td>Franka でアルファベットスープをカゴに入れる</td><td class="num">34/50</td><td class="num">36/50</td></tr>
+    <tr><td>A0 → B0</td><td>UR5e でアルファベットスープをカゴに入れる</td><td class="num bad">判定 1/50、実質 0/50（持ち上げ 0）</td><td class="num bad">0/50（持ち上げ 0）</td></tr>
+  </table>
+  <p>学習は pi0.5 のベース重みから LoRA、1 万ステップ、デモ 50 本です。評価は公式のカゴ領域判定です。A0→B0 の 1 件は、缶が元の場所に残っているのに原点付近と記録されて成功になっています。50 回すべて缶を持ち上げていません。</p>
+  <p>Franka 自身の性能はほぼ同じです。状態の数値をロボット間で揃えても、UR5e での動きは変わりませんでした。</p>
+
+  <h2>動画　A0 → A0（Franka の重みを Franka で）　34/50</h2>
+  <p>やるべきタスクは、Franka で<b>アルファベットスープ</b>をカゴに入れることです。重みは Franka スープを新しい正規化で学習したものです。</p>
+  <div class="grid">
+    <figure>
+      <video src="A0_on_A0_init00.mp4" controls autoplay muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきタスク：Franka で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：スープをつかんで 19.6 cm 持ち上げ、カゴに入れます。5.7 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="A0_on_A0_init02.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 2　失敗</b><br>やるべきタスク：Franka で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：右の<b>ケチャップ</b>に手を伸ばして倒します。スープは動いていません。持ち上げ 1.1 cm。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="A0_on_A0_init26.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 26　失敗</b><br>やるべきタスク：Franka で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：やはり<b>ケチャップ</b>を倒して止まります。手はスープに近づいていません。持ち上げ 1.2 cm。15 秒。</figcaption>
+    </figure>
+  </div>
+
+  <h2>動画　A0 → B0（Franka の重みを UR5e で）　実質 0/50</h2>
+  <p>やるべきタスクは、UR5e で<b>アルファベットスープ</b>をカゴに入れることです。重みは上と同じ Franka スープです。3 本とも腕が右へ振れて画面の外へ出ていき、スープには触れていません。</p>
+  <div class="grid">
+    <figure>
+      <video src="A0_on_B0_init00.mp4" controls autoplay muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 0　失敗</b><br>やるべきタスク：UR5e で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：腕は右へ振れて画面の外へ出ます。缶は元の場所のまま。持ち上げ 0。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="A0_on_B0_init01.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 1　失敗</b><br>やるべきタスク：UR5e で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：init 0 と同じく、腕が右へ振れて外へ出ます。缶には触れていません。持ち上げ 0。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="A0_on_B0_init17.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 17　判定上は成功、実際は失敗</b><br>やるべきタスク：UR5e で<b>アルファベットスープ</b>をカゴに入れる。<br>重み：Franka スープ、新しい正規化。<br>実際の動き：腕は右へ振れて外へ出ます。缶は元の場所に残っています。記録上は缶が原点付近になったため成功判定が立ち、5.7 秒で止まっています。持ち上げ 0。</figcaption>
+    </figure>
+  </div>
 
   <h2>なぜ変えるか</h2>
   <p>openpi の pi0.5 は、学習したデータセットの分位点で状態と行動を −1〜1 に写します。<code>(x − q01) / (q99 − q01) × 2 − 1</code> です。いままでは「学習したタスクのデモ」の分位点だったので、ロボットをまたぐと UR5e の状態を Franka の範囲で写すことになっていました。</p>
@@ -51,7 +98,8 @@
     <tr><td>グリッパ閉じ具合</td><td class="num">0</td><td class="num">1</td><td>全開〜全閉</td></tr>
     <tr><td>行動 7 次元</td><td class="num">−1</td><td class="num">1</td><td>OSC コントローラが切る範囲。移動は 1 で 5 cm。グリッパは −1 で開、+1 で閉</td></tr>
   </table>
-  <p class="note">範囲はシーンの設定とロボットの仕様だけから決めていて、デモは使っていません。そのため、評価タスクのデモが正規化に入るリークは起きません。4 本の LoRA はすべて同じ <code>norm_stats.json</code> で学習します。</p>
+  <p class="note">範囲はシーンの設定とロボットの仕様だけから決めていて、デモは使っていません。そのため、評価タスクのデモが正規化に入るリークは起きません。A0 の LoRA も、これから学習する LoRA も、同じ <code>norm_stats.json</code> を使います。ガウシアンノイズは入れていません。</p>
+  <p>マイナスの正規化値は、範囲が −1〜1 なので普通に出ます。UR5e の全開は Robotiq の関節が少しマイナスに入るため −1.08 になります。openpi はクリップしないので、このまま通しています。つかんだときの閉じ具合はロボットで違います（Franka のスープ約 −0.56、UR5e 約 −0.14）。グリッパの形の違いで、正規化では揃えません。</p>
 
   <h2>確認したこと</h2>
   <p><b>4 つの学習データを新しい正規化で写した範囲</b>（各 50 本、7000 フレーム）</p>
@@ -72,18 +120,10 @@
   <p class="ok">前は UR5e だけ約 −540 まで外れていましたが、両ロボットでほぼ同じ値になりました。</p>
   <ul>
     <li>学習データに入れた状態と、推論サーバで同じ関数を通した状態は完全に一致しました（差 0.0）。</li>
-    <li>推論サーバは、新しい設定で起動できることを CPU 上で確認しました。</li>
+    <li>A0→A0 の最初の評価は、Franka の評価から届く状態が読み取り専用で落ちました。配列をコピーしてから正規化に渡すよう直し、同じ 50 配置で取り直した結果が上の 34/50 です。正規化の範囲と写し方は変えていません。</li>
   </ul>
 
-  <h2>実験の進め方</h2>
-  <p>正規化は学習の一部なので、LoRA は学習し直しになります。1 本ずつ進めます。</p>
-  <table>
-    <tr><th>順</th><th>内容</th><th>前回（タスクごとの正規化）</th><th>状況</th></tr>
-    <tr><td>1</td><td>A0（Franka スープ）を新しい正規化で学習し直す。pi05_base から 1 万ステップ、LoRA r=16、デモ 50 本</td><td>—</td><td>GPU が空くのを待っている</td></tr>
-    <tr><td>2</td><td>A0 → A0（Oracle）。新しい正規化でも学習できているかの確認</td><td class="num">36/50</td><td>未</td></tr>
-    <tr><td>3</td><td>A0 → B0（ロボットをまたぐ）。UR5e でスープ</td><td class="num">0/50（持ち上げ 0）</td><td>未</td></tr>
-    <tr><td>4</td><td>結果を見て B0 か A2 に進む</td><td></td><td></td></tr>
-  </table>
-  <p class="note">評価は前回と同じ条件です。50 配置、seed 7、300 ステップ（15 秒）で、成功は公式のカゴ領域判定です。全エピソードの動画を保存します。</p>
+  <h2>次</h2>
+  <p>B0 や A2 の学習にはまだ進んでいません。状態の数値を揃えても A0→B0 は動かなかったので、失敗の主な原因は画像の見た目の違い（腕の形や色）か、同じ動作指令でも 2 台で手の動きが違うことのどちらかだと考えています。</p>
 </body>
 </html>
