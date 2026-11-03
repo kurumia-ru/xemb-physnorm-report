@@ -18,7 +18,7 @@
     .note { color: #aaa; font-size: 14px; }
     .grid { display: flex; flex-wrap: wrap; gap: 20px; }
     figure { margin: 0; width: 320px; }
-    video { width: 320px; height: 320px; background: #000; display: block; }
+    video, img.shot { width: 320px; height: 320px; background: #000; display: block; object-fit: contain; }
     figcaption { font-size: 14px; margin-top: 8px; }
   </style>
 </head>
@@ -38,6 +38,23 @@
   <p>直したのは状態の数字だけ。以前は UR5e の真下向きが Franka の統計で約 −540 になっていた。今回は同じ姿勢なら両ロボットとも −1〜1 に入る。それでも A0→B0 の動きは変わらなかった。</p>
   <p>だから失敗の原因は、状態のスケールではない。モデルは画像も見ている。学習時の腕は白い Franka、推論時は青い UR5e で、形も色も違う。最初から缶と反対の右へ大きく動くので、指令そのものがおかしい。同じ指令なのに 2 台で手が少し違う、という話でもない。</p>
   <p>つかんだときのグリッパ値の差（Franka 約 −0.56、UR5e 約 −0.14）も、今回は関係ない。缶まで行っていない。</p>
+
+  <h2>腕を消した画像</h2>
+  <p>Adapt3R に合わせて、学習・推論の RGB から腕を塗っています。缶とカゴはそのまま。A0 をこれで学習し直し中。</p>
+  <div class="grid">
+    <figure>
+      <img class="shot" src="mask_before.png" alt="元の第三者カメラ" />
+      <figcaption>元（第三者カメラ）</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="mask_after.png" alt="腕を消した第三者カメラ" />
+      <figcaption>腕を消したあとの第三者カメラ</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="mask_wrist.png" alt="腕を消した手元カメラ" />
+      <figcaption>腕を消したあとの手元カメラ</figcaption>
+    </figure>
+  </div>
 
   <h2>動画</h2>
   <p>公式評価から 4 本。やるべきタスクはどれもスープをカゴに入れること。重みは Franka スープ。</p>
