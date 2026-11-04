@@ -24,23 +24,44 @@
 </head>
 <body>
   <h1>ロボット間で共通の正規化</h1>
-  <p>A は Franka、B は UR5e、0 はスープ。状態をロボット間で揃えて A0 を学習し直した。50 配置・seed 7・300 ステップの公式評価。2026-11-03。</p>
+  <p>A は Franka、B は UR5e、0 はスープ。50 配置・seed 7・300 ステップの公式評価。2026-11-04。</p>
 
   <h2>結果</h2>
   <table>
-    <tr><th></th><th>やるべきタスク</th><th>新しい正規化</th><th>前回</th></tr>
-    <tr><td>A0 → A0</td><td>Franka でスープをカゴへ</td><td class="num">34/50</td><td class="num">36/50</td></tr>
-    <tr><td>A0 → B0</td><td>UR5e でスープをカゴへ</td><td class="num bad">実質 0/50</td><td class="num bad">0/50</td></tr>
+    <tr><th></th><th>やるべきタスク</th><th>腕なし画像</th><th>正規化だけ</th><th>さらに前</th></tr>
+    <tr><td>A0 → A0</td><td>Franka でスープをカゴへ</td><td class="num">32/50</td><td class="num">34/50</td><td class="num">36/50</td></tr>
+    <tr><td>A0 → B0</td><td>UR5e でスープをカゴへ</td><td class="num bad">0/50</td><td class="num bad">実質 0/50</td><td class="num bad">0/50</td></tr>
   </table>
-  <p>同じロボットでは前回どおり動く。ロボットを変えると、前回と同じく腕が右へ飛んで缶に届かない。判定 1/50 は誤作動（缶は元の場所、持ち上げは 50 回とも 0）。</p>
+  <p>腕を消しても Franka 自身は動く。UR5e では 50 回とも缶に届かず、持ち上げは 0。</p>
+
+  <h2>動画　腕を消した A0</h2>
+  <p>公式評価から 4 本。やるべきタスクはスープをカゴに入れること。重みは Franka スープ、腕なし画像で学習したもの。Franka の動画は方策に渡している画像なので腕が灰色。UR5e の動画は実機の見た目（記録は塗っていない）。</p>
+  <div class="grid">
+    <figure>
+      <video src="mask_A0_init00.mp4" controls autoplay muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：つかんでカゴへ。7.6 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="mask_A0_init01.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 1　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：ケチャップを倒す。スープは動かない。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="mask_B0_init00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 0　失敗</b><br>やるべきタスク：UR5e でスープ。<br>実際：腕が右へ画面外へ。缶に触れない。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="mask_B0_init01.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 1　失敗</b><br>やるべきタスク：UR5e でスープ。<br>実際：init 0 と同じ。持ち上げ 0。15 秒。</figcaption>
+    </figure>
+  </div>
 
   <h2>なぜ正規化しても右へ飛んだか</h2>
   <p>直したのは状態の数字だけ。以前は UR5e の真下向きが Franka の統計で約 −540 になっていた。今回は同じ姿勢なら両ロボットとも −1〜1 に入る。それでも A0→B0 の動きは変わらなかった。</p>
   <p>だから失敗の原因は、状態のスケールではない。モデルは画像も見ている。学習時の腕は白い Franka、推論時は青い UR5e で、形も色も違う。最初から缶と反対の右へ大きく動くので、指令そのものがおかしい。同じ指令なのに 2 台で手が少し違う、という話でもない。</p>
-  <p>つかんだときのグリッパ値の差（Franka 約 −0.56、UR5e 約 −0.14）も、今回は関係ない。缶まで行っていない。</p>
+  <p>つかんだときのグリッパ値の差（Franka 約 −0.56、UR5e 約 −0.14）も、今回は関係ない。缶まで行っていない。腕を灰色に塗っても A0→B0 は同じ動きのままなので、白い腕の写真だけが原因でもない。</p>
 
   <h2>腕を消した画像</h2>
-  <p>Adapt3R に合わせて、学習・推論の RGB から腕を塗っています。缶とカゴはそのまま。A0 をこれで学習し直し中。</p>
+  <p>Adapt3R に合わせて、学習・推論の RGB から腕を塗っています。缶とカゴはそのまま。</p>
   <div class="grid">
     <figure>
       <img class="shot" src="mask_before.png" alt="元の第三者カメラ" />
@@ -56,8 +77,8 @@
     </figure>
   </div>
 
-  <h2>動画</h2>
-  <p>公式評価から 4 本。やるべきタスクはどれもスープをカゴに入れること。重みは Franka スープ。</p>
+  <h2>動画　正規化だけのとき</h2>
+  <p>腕は消していない。公式評価から 4 本。重みは Franka スープ。</p>
   <div class="grid">
     <figure>
       <video src="A0_on_A0_init00.mp4" controls autoplay muted loop playsinline></video>
