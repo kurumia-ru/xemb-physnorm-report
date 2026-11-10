@@ -38,6 +38,46 @@
   </table>
   <p>効いたのは手の付け替えではなく開始位置。改造なしで 18/50。公式判定 17/50、カゴ 18/50、持ち上げ 25/50。重みはどれも Franka スープ（A0）。A0→A0 は正規化だけ 34/50、腕なし 32/50。</p>
 
+  <h2>合わせた B0 → A0 も 0/50</h2>
+  <p>UR のスープ重みを Franka で評価した。開始は UR のホバーへ OSC で寄せた（ずれ 6.4 mm）。正規化は評価先 Franka の式。50 配置すべて失敗。缶に近づいたのは 2/50、つかむ・持ち上げは 0。</p>
+  <table>
+    <tr><th>条件</th><th>内容</th></tr>
+    <tr><td>腕・手</td><td>Franka のまま</td></tr>
+    <tr><td>開始位置</td><td>UR のホバーへ合わせる。ずれ 6.4 mm</td></tr>
+    <tr><td>グリッパの数字</td><td>Franka の閉じ具合の式</td></tr>
+    <tr><td>重み</td><td>UR5e スープ（B0）</td></tr>
+    <tr><td>判定</td><td class="bad">0/50（50 本すべて失敗）</td></tr>
+  </table>
+  <p>公式評価から 4 本。どれもスープに触れない。</p>
+  <div class="grid">
+    <figure>
+      <video src="b0a0_match_init00.mp4" controls autoplay muted loop playsinline></video>
+      <figcaption><b>B0 → A0　init 0　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：缶に触れない。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="b0a0_match_init01.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → A0　init 1　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：缶に触れない。腕が右へ。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="b0a0_match_init10.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → A0　init 10　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：缶に触れない。15 秒。</figcaption>
+    </figure>
+    <figure>
+      <video src="b0a0_match_init25.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → A0　init 25　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：缶に触れない。15 秒。</figcaption>
+    </figure>
+  </div>
+  <div class="grid">
+    <figure>
+      <img class="shot" src="b0a0_match_init00.png" alt="init 0 開始" />
+      <figcaption>init 0 開始。UR ホバーに合わせた高さ。</figcaption>
+    </figure>
+    <figure>
+      <img class="shot" src="b0a0_match_mid00.png" alt="init 0 途中" />
+      <figcaption>init 0 途中。缶の上で止まる。</figcaption>
+    </figure>
+  </div>
+
   <h2>今回やったこと</h2>
   <table>
     <tr><th></th><th>内容</th></tr>
