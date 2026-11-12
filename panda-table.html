@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UR5e + 手先 Franka の表</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; background: #111; color: #eee; line-height: 1.55; }
+    h1 { font-size: 26px; margin-bottom: 8px; }
+    h2 { font-size: 20px; margin: 28px 0 8px; border-bottom: 1px solid #444; padding-bottom: 4px; }
+    h3 { font-size: 16px; margin: 20px 0 8px; }
+    p, li { max-width: 900px; }
+    table { border-collapse: collapse; margin: 8px 0 16px; }
+    th, td { border: 1px solid #444; padding: 6px 10px; text-align: left; vertical-align: top; }
+    th { background: #222; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    code { background: #222; padding: 1px 4px; border-radius: 3px; }
+    .bad { color: #f88; }
+    .ok { color: #8d8; }
+    .note { color: #aaa; font-size: 14px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 20px; }
+    figure { margin: 0; width: 320px; }
+    video { width: 320px; height: 320px; background: #000; display: block; object-fit: contain; }
+    figcaption { font-size: 14px; margin-top: 8px; }
+    a { color: #9cf; }
+  </style>
+</head>
+<body>
+  <h1>UR5e + 手先 Franka の表</h1>
+  <p><a href="index.html">正規化のページ</a>とは別。A は Franka、B は UR5e に Franka の手（Panda）を付けたもの。0 はスープ、2 はサラダドレッシング。やるべきタスクは対象をカゴに入れること。50 配置・seed 7・300 ステップ。2026-11-12。</p>
+
+  <h2>結果</h2>
+  <p>数字は 50 本中の成功。UR5e 側はカゴに入った本数（pred または in_basket）。公式の predicate だけ違うマスは括弧。</p>
+  <table>
+    <tr>
+      <th></th>
+      <th>A0　スープ / Franka</th>
+      <th>A2　サラダ / Franka</th>
+      <th>B0　スープ / UR5e+Franka手</th>
+      <th>B2　サラダ / UR5e+Franka手</th>
+    </tr>
+    <tr>
+      <th>Oracle</th>
+      <td class="num ok">A0 → A0<br>34/50</td>
+      <td class="num ok">A2 → A2<br>47/50</td>
+      <td class="num ok">B0 → B0<br>46/50<br><span class="note">公式 41</span></td>
+      <td class="num ok">B2 → B2<br>50/50</td>
+    </tr>
+    <tr>
+      <th>Cross-body</th>
+      <td class="num ok">B0 → A0<br>33/50</td>
+      <td class="num ok">B2 → A2<br>48/50</td>
+      <td class="num ok">A0 → B0<br>13/50<br><span class="note">公式 12</span></td>
+      <td class="num ok">A2 → B2<br>9/50<br><span class="note">公式 6</span></td>
+    </tr>
+    <tr>
+      <th>Cross-task</th>
+      <td class="num bad">A2 → A0<br>0/50</td>
+      <td class="num bad">A0 → A2<br>0/50</td>
+      <td class="num bad">B2 → B0<br>0/50</td>
+      <td class="num bad">B0 → B2<br>0/50</td>
+    </tr>
+    <tr>
+      <th>Arithmetic</th>
+      <td class="num ok">A2 + B0 − B2 → A0<br>3/50</td>
+      <td class="num ok">A0 + B2 − B0 → A2<br>41/50</td>
+      <td class="num ok">B2 + A0 − A2 → B0<br>1/50<br><span class="note">公式 0</span></td>
+      <td class="num ok">B0 + A2 − A0 → B2<br>1/50<br><span class="note">公式 0</span></td>
+    </tr>
+  </table>
+  <p>Arithmetic の中身は LoRA の足し引き。ベース重み <code>W</code> に対して <code>W' = W + 2 (B<sub>p</sub>A<sub>p</sub> + B<sub>q</sub>A<sub>q</sub> − B<sub>r</sub>A<sub>r</sub>)</code>。2 は α/r = 32/16。行き先のロボットで評価する。</p>
+  <table>
+    <tr><th>式</th><th>使う LoRA</th><th>評価先</th><th>成功</th></tr>
+    <tr><td><code>A2 + B0 − B2</code></td><td>Frankaサラダ + URスープ − URサラダ</td><td>A0　Franka スープ</td><td class="ok">3/50</td></tr>
+    <tr><td><code>A0 + B2 − B0</code></td><td>Frankaスープ + URサラダ − URスープ</td><td>A2　Franka サラダ</td><td class="ok">41/50</td></tr>
+    <tr><td><code>B2 + A0 − A2</code></td><td>URサラダ + Frankaスープ − Frankaサラダ</td><td>B0　UR5e スープ</td><td class="ok">1/50（公式 0）</td></tr>
+    <tr><td><code>B0 + A2 − A0</code></td><td>URスープ + Frankaサラダ − Frankaスープ</td><td>B2　UR5e サラダ</td><td class="ok">1/50（公式 0）</td></tr>
+  </table>
+
+  <h2>条件</h2>
+  <table>
+    <tr><th>項目</th><th>内容</th></tr>
+    <tr><td>A</td><td>Franka。腕も手先も Franka</td></tr>
+    <tr><td>B</td><td>UR5e に Franka の手（Panda グリッパ）。Robotiq は使わない</td></tr>
+    <tr><td>タスク</td><td>0 スープ、2 サラダドレッシング。カゴへ入れる</td></tr>
+    <tr><td>本数</td><td>50 配置、seed 7、最大 300 ステップ</td></tr>
+    <tr><td>学習</td><td>π0.5 + LoRA 10k。physnorm（位置・姿勢・閉じ具合を共通の物理レンジへ）</td></tr>
+    <tr><td>グリッパの数字</td><td>学習も推論も Franka の閉じ具合の式</td></tr>
+    <tr><td>B の学習開始</td><td>その配置の Franka 手先へ合わせてからデモ</td></tr>
+    <tr><td>UR5e で評価するとき</td><td>全部 Panda 手先。開始もその配置の Franka 手先</td></tr>
+    <tr><td>Franka で評価するとき</td><td>腕も手先も Franka。B の重みを載せるときも開始はその配置の Franka 手先</td></tr>
+    <tr><td>ノイズ</td><td>ガウシアンなし</td></tr>
+  </table>
+  <p class="note">A の Oracle と Cross-task（34, 47, 0, 0）は Franka 素のまま。B 側と Arithmetic は付け替え後の重み。</p>
+
+  <h2>動画</h2>
+  <p>成功があるマスは成功と失敗を 1 本ずつ。成功がないマスは失敗だけ。B2 Oracle は 50/50 なので成功だけ。</p>
+
+  <h3>Oracle　A0 → A0　34/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="A0_on_A0_init00.mp4" controls autoplay muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：つかんでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="A0_on_A0_init02.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → A0　init 2　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Oracle　A2 → A2　47/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/A2A2_ok00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2 → A2　init 0　成功</b><br>やるべきタスク：Franka でサラダ。<br>実際：つかんでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/A2A2_fail04.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2 → A2　init 4　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Oracle　B0 → B0　46/50（公式 41）</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/B0B0_ok00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → B0　init 0　成功</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：つかんでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/B0B0_fail20.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → B0　init 20　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Oracle　B2 → B2　50/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/B2B2_ok00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B2 → B2　init 0　成功</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：つかんでカゴへ。失敗なし。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-body　B0 → A0　33/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="p2f_ok07.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → A0　init 7　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：UR のスープ重みでつかんでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="p2f_fail41.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → A0　init 41　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-body　B2 → A2　48/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/B2A2_ok09.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B2 → A2　init 9　成功</b><br>やるべきタスク：Franka でサラダ。<br>実際：UR のサラダ重みでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/B2A2_fail10.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B2 → A2　init 10　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-body　A0 → B0　13/50（公式 12）</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda_ok00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 0　成功</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：Franka のスープ重みでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda_fail03.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → B0　init 3　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-body　A2 → B2　9/50（公式 6）</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/A2B2_ok04.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2 → B2　init 4　成功</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：Franka のサラダ重みでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/A2B2_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2 → B2　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-task　A2 → A0　0/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/A2A0_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2 → A0　init 0　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：サラダ重みでは入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-task　A0 → A2　0/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/A0A2_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0 → A2　init 0　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：スープ重みでは入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-task　B2 → B0　0/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/B2B0_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B2 → B0　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：サラダ重みでは入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Cross-task　B0 → B2　0/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/B0B2_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0 → B2　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：スープ重みでは入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Arithmetic　A2 + B0 − B2 → A0　3/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/arithA0_ok08.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2+B0−B2 → A0　init 8　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：つかんでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/arithA0_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A2+B0−B2 → A0　init 0　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Arithmetic　A0 + B2 − B0 → A2　41/50</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/arithA2_ok00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0+B2−B0 → A2　init 0　成功</b><br>やるべきタスク：Franka でサラダ。<br>実際：つかんでカゴへ。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/arithA2_fail02.mp4" controls muted loop playsinline></video>
+      <figcaption><b>A0+B2−B0 → A2　init 2　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Arithmetic　B2 + A0 − A2 → B0　1/50（公式 0）</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/arithB0_ok39.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B2+A0−A2 → B0　init 39　成功</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入る（公式 predicate は失敗）。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/arithB0_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B2+A0−A2 → B0　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+
+  <h3>Arithmetic　B0 + A2 − A0 → B2　1/50（公式 0）</h3>
+  <div class="grid">
+    <figure>
+      <video src="panda-table/arithB2_ok13.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0+A2−A0 → B2　init 13　成功</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：カゴに入る（公式 predicate は失敗）。</figcaption>
+    </figure>
+    <figure>
+      <video src="panda-table/arithB2_fail00.mp4" controls muted loop playsinline></video>
+      <figcaption><b>B0+A2−A0 → B2　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：カゴに入らない。</figcaption>
+    </figure>
+  </div>
+</body>
+</html>
