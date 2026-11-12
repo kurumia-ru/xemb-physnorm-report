@@ -20,24 +20,43 @@
     .note { color: #aaa; font-size: 14px; }
     .grid { display: flex; flex-wrap: wrap; gap: 20px; }
     figure { margin: 0; width: 320px; }
-    video { width: 320px; height: 320px; background: #000; display: block; object-fit: contain; }
+    video, img.scene { width: 320px; height: 320px; background: #000; display: block; object-fit: contain; }
+    img.legend { width: 580px; max-width: 100%; background: #111; display: block; }
+    figure.wide { width: min(580px, 100%); }
     figcaption { font-size: 14px; margin-top: 8px; }
     a { color: #9cf; }
   </style>
 </head>
 <body>
   <h1>UR5e + 手先 Franka の表</h1>
-  <p><a href="index.html">正規化のページ</a>とは別。A は Franka、B は UR5e に Franka の手（Panda）を付けたもの。0 はスープ、2 はサラダドレッシング。やるべきタスクは対象をカゴに入れること。50 配置・seed 7・300 ステップ。2026-11-12。</p>
+  <p><a href="index.html">正規化のページ</a>とは別。A は Franka、B は UR5e に Franka の手（Panda）を付けたもの。机の上には缶や瓶が複数ある。取るのはいつも1個だけ。50 配置・seed 7・300 ステップ。2026-11-12。</p>
+
+  <h2>どれを取るか</h2>
+  <p><b>0</b> は赤いスープ缶（alphabet soup）。<b>2</b> は緑キャップのサラダドレッシング瓶。茶色い瓶はケチャップで、どちらでもない。成功は、指定した1個を左のカゴに入れること。</p>
+  <figure class="wide">
+    <img class="legend" src="panda-table/objects.png" alt="スープ缶とサラダドレッシングの切り抜き" />
+    <figcaption>評価映像から切り抜いた。左がスープ缶、右がサラダドレッシング。</figcaption>
+  </figure>
+  <div class="grid">
+    <figure>
+      <img class="scene" src="panda-table/scene_soup.png" alt="スープ缶をカゴへ" />
+      <figcaption><b>タスク 0</b><br>やるべきこと：赤いスープ缶をつかんで、左のカゴに入れる。<br>サラダドレッシングは置いたまま。</figcaption>
+    </figure>
+    <figure>
+      <img class="scene" src="panda-table/scene_dressing.png" alt="サラダドレッシングをカゴへ" />
+      <figcaption><b>タスク 2</b><br>やるべきこと：緑キャップのサラダドレッシング瓶をつかんで、左のカゴに入れる。<br>スープ缶もケチャップも置いたまま。</figcaption>
+    </figure>
+  </div>
 
   <h2>結果</h2>
   <p>数字は 50 本中の成功。UR5e 側はカゴに入った本数（pred または in_basket）。公式の predicate だけ違うマスは括弧。</p>
   <table>
     <tr>
       <th></th>
-      <th>A0　スープ / Franka</th>
-      <th>A2　サラダ / Franka</th>
-      <th>B0　スープ / UR5e+Franka手</th>
-      <th>B2　サラダ / UR5e+Franka手</th>
+      <th>A0　スープ缶 / Franka</th>
+      <th>A2　ドレッシング / Franka</th>
+      <th>B0　スープ缶 / UR5e+Franka手</th>
+      <th>B2　ドレッシング / UR5e+Franka手</th>
     </tr>
     <tr>
       <th>Oracle</th>
@@ -71,10 +90,10 @@
   <p>Arithmetic の中身は LoRA の足し引き。ベース重み <code>W</code> に対して <code>W' = W + 2 (B<sub>p</sub>A<sub>p</sub> + B<sub>q</sub>A<sub>q</sub> − B<sub>r</sub>A<sub>r</sub>)</code>。2 は α/r = 32/16。行き先のロボットで評価する。</p>
   <table>
     <tr><th>式</th><th>使う LoRA</th><th>評価先</th><th>成功</th></tr>
-    <tr><td><code>A2 + B0 − B2</code></td><td>Frankaサラダ + URスープ − URサラダ</td><td>A0　Franka スープ</td><td class="ok">3/50</td></tr>
-    <tr><td><code>A0 + B2 − B0</code></td><td>Frankaスープ + URサラダ − URスープ</td><td>A2　Franka サラダ</td><td class="ok">41/50</td></tr>
-    <tr><td><code>B2 + A0 − A2</code></td><td>URサラダ + Frankaスープ − Frankaサラダ</td><td>B0　UR5e スープ</td><td class="ok">1/50（公式 0）</td></tr>
-    <tr><td><code>B0 + A2 − A0</code></td><td>URスープ + Frankaサラダ − Frankaスープ</td><td>B2　UR5e サラダ</td><td class="ok">1/50（公式 0）</td></tr>
+    <tr><td><code>A2 + B0 − B2</code></td><td>Frankaドレッシング + URスープ缶 − URドレッシング</td><td>A0　Franka でスープ缶をカゴへ</td><td class="ok">3/50</td></tr>
+    <tr><td><code>A0 + B2 − B0</code></td><td>Frankaスープ缶 + URドレッシング − URスープ缶</td><td>A2　Franka でドレッシングをカゴへ</td><td class="ok">41/50</td></tr>
+    <tr><td><code>B2 + A0 − A2</code></td><td>URドレッシング + Frankaスープ缶 − Frankaドレッシング</td><td>B0　UR5e でスープ缶をカゴへ</td><td class="ok">1/50（公式 0）</td></tr>
+    <tr><td><code>B0 + A2 − A0</code></td><td>URスープ缶 + Frankaドレッシング − Frankaスープ缶</td><td>B2　UR5e でドレッシングをカゴへ</td><td class="ok">1/50（公式 0）</td></tr>
   </table>
 
   <h2>条件</h2>
@@ -82,7 +101,8 @@
     <tr><th>項目</th><th>内容</th></tr>
     <tr><td>A</td><td>Franka。腕も手先も Franka</td></tr>
     <tr><td>B</td><td>UR5e に Franka の手（Panda グリッパ）。Robotiq は使わない</td></tr>
-    <tr><td>タスク</td><td>0 スープ、2 サラダドレッシング。カゴへ入れる</td></tr>
+    <tr><td>タスク 0</td><td>赤いスープ缶をつかんで左のカゴへ。言語は pick up the alphabet soup and place it in the basket</td></tr>
+    <tr><td>タスク 2</td><td>緑キャップのサラダドレッシング瓶をつかんで左のカゴへ。言語は pick up the salad dressing and place it in the basket</td></tr>
     <tr><td>本数</td><td>50 配置、seed 7、最大 300 ステップ</td></tr>
     <tr><td>学習</td><td>π0.5 + LoRA 10k。physnorm（位置・姿勢・閉じ具合を共通の物理レンジへ）</td></tr>
     <tr><td>グリッパの数字</td><td>学習も推論も Franka の閉じ具合の式</td></tr>
@@ -100,11 +120,11 @@
   <div class="grid">
     <figure>
       <video src="A0_on_A0_init00.mp4" controls autoplay muted loop playsinline></video>
-      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：つかんでカゴへ。</figcaption>
+      <figcaption><b>A0 → A0　init 0　成功</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。<br>実際：缶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="A0_on_A0_init02.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → A0　init 2　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>A0 → A0　init 2　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -112,11 +132,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/A2A2_ok00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2 → A2　init 0　成功</b><br>やるべきタスク：Franka でサラダ。<br>実際：つかんでカゴへ。</figcaption>
+      <figcaption><b>A2 → A2　init 0　成功</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。<br>実際：瓶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/A2A2_fail04.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2 → A2　init 4　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>A2 → A2　init 4　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -124,11 +144,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/B0B0_ok00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0 → B0　init 0　成功</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：つかんでカゴへ。</figcaption>
+      <figcaption><b>B0 → B0　init 0　成功</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。<br>実際：缶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/B0B0_fail20.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0 → B0　init 20　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>B0 → B0　init 20　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -136,7 +156,7 @@
   <div class="grid">
     <figure>
       <video src="panda-table/B2B2_ok00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B2 → B2　init 0　成功</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：つかんでカゴへ。失敗なし。</figcaption>
+      <figcaption><b>B2 → B2　init 0　成功</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。<br>実際：瓶をつかんでカゴに入った。50本とも成功。</figcaption>
     </figure>
   </div>
 
@@ -144,11 +164,11 @@
   <div class="grid">
     <figure>
       <video src="p2f_ok07.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0 → A0　init 7　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：UR のスープ重みでつかんでカゴへ。</figcaption>
+      <figcaption><b>B0 → A0　init 7　成功</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。重みは UR5e スープ。<br>実際：缶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="p2f_fail41.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0 → A0　init 41　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>B0 → A0　init 41　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。重みは UR5e スープ。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -156,11 +176,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/B2A2_ok09.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B2 → A2　init 9　成功</b><br>やるべきタスク：Franka でサラダ。<br>実際：UR のサラダ重みでカゴへ。</figcaption>
+      <figcaption><b>B2 → A2　init 9　成功</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。重みは UR5e ドレッシング。<br>実際：瓶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/B2A2_fail10.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B2 → A2　init 10　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>B2 → A2　init 10　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。重みは UR5e ドレッシング。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -168,11 +188,11 @@
   <div class="grid">
     <figure>
       <video src="panda_ok00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → B0　init 0　成功</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：Franka のスープ重みでカゴへ。</figcaption>
+      <figcaption><b>A0 → B0　init 0　成功</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは Franka スープ。<br>実際：缶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda_fail03.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → B0　init 3　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>A0 → B0　init 3　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは Franka スープ。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -180,11 +200,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/A2B2_ok04.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2 → B2　init 4　成功</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：Franka のサラダ重みでカゴへ。</figcaption>
+      <figcaption><b>A2 → B2　init 4　成功</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは Franka ドレッシング。<br>実際：瓶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/A2B2_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2 → B2　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>A2 → B2　init 0　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは Franka ドレッシング。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -192,7 +212,7 @@
   <div class="grid">
     <figure>
       <video src="panda-table/A2A0_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2 → A0　init 0　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：サラダ重みでは入らない。</figcaption>
+      <figcaption><b>A2 → A0　init 0　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。重みはサラダドレッシング用。<br>実際：スープ缶はカゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -200,7 +220,7 @@
   <div class="grid">
     <figure>
       <video src="panda-table/A0A2_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0 → A2　init 0　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：スープ重みでは入らない。</figcaption>
+      <figcaption><b>A0 → A2　init 0　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。重みはスープ缶用。<br>実際：ドレッシングはカゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -208,7 +228,7 @@
   <div class="grid">
     <figure>
       <video src="panda-table/B2B0_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B2 → B0　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：サラダ重みでは入らない。</figcaption>
+      <figcaption><b>B2 → B0　init 0　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みはドレッシング用。<br>実際：スープ缶はカゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -216,7 +236,7 @@
   <div class="grid">
     <figure>
       <video src="panda-table/B0B2_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0 → B2　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：スープ重みでは入らない。</figcaption>
+      <figcaption><b>B0 → B2　init 0　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みはスープ缶用。<br>実際：ドレッシングはカゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -224,11 +244,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/arithA0_ok08.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2+B0−B2 → A0　init 8　成功</b><br>やるべきタスク：Franka でスープ。<br>実際：つかんでカゴへ。</figcaption>
+      <figcaption><b>A2+B0−B2 → A0　init 8　成功</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。重みは A2+B0−B2。<br>実際：缶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/arithA0_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A2+B0−B2 → A0　init 0　失敗</b><br>やるべきタスク：Franka でスープ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>A2+B0−B2 → A0　init 0　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：Franka。重みは A2+B0−B2。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -236,11 +256,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/arithA2_ok00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0+B2−B0 → A2　init 0　成功</b><br>やるべきタスク：Franka でサラダ。<br>実際：つかんでカゴへ。</figcaption>
+      <figcaption><b>A0+B2−B0 → A2　init 0　成功</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。重みは A0+B2−B0。<br>実際：瓶をつかんでカゴに入った。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/arithA2_fail02.mp4" controls muted loop playsinline></video>
-      <figcaption><b>A0+B2−B0 → A2　init 2　失敗</b><br>やるべきタスク：Franka でサラダ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>A0+B2−B0 → A2　init 2　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：Franka。重みは A0+B2−B0。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -248,11 +268,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/arithB0_ok39.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B2+A0−A2 → B0　init 39　成功</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入る（公式 predicate は失敗）。</figcaption>
+      <figcaption><b>B2+A0−A2 → B0　init 39　成功</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは B2+A0−A2。<br>実際：カゴに入る（公式 predicate は失敗）。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/arithB0_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B2+A0−A2 → B0　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でスープ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>B2+A0−A2 → B0　init 0　失敗</b><br>やるべきこと：赤いスープ缶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは B2+A0−A2。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 
@@ -260,11 +280,11 @@
   <div class="grid">
     <figure>
       <video src="panda-table/arithB2_ok13.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0+A2−A0 → B2　init 13　成功</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：カゴに入る（公式 predicate は失敗）。</figcaption>
+      <figcaption><b>B0+A2−A0 → B2　init 13　成功</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは B0+A2−A0。<br>実際：カゴに入る（公式 predicate は失敗）。</figcaption>
     </figure>
     <figure>
       <video src="panda-table/arithB2_fail00.mp4" controls muted loop playsinline></video>
-      <figcaption><b>B0+A2−A0 → B2　init 0　失敗</b><br>やるべきタスク：UR5e+Franka手 でサラダ。<br>実際：カゴに入らない。</figcaption>
+      <figcaption><b>B0+A2−A0 → B2　init 0　失敗</b><br>やるべきこと：緑のサラダドレッシング瓶を左のカゴへ。<br>ロボット：UR5e。手先は Franka。重みは B0+A2−A0。<br>実際：カゴに入らない。</figcaption>
     </figure>
   </div>
 </body>
