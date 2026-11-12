@@ -49,7 +49,7 @@
   </div>
 
   <h2>結果</h2>
-  <p>数字は 50 本中の成功。UR5e 側はカゴに入った本数（pred または in_basket）。公式の predicate だけ違うマスは括弧。</p>
+  <p>大きい数字はこのページの成功。括弧の「公式」は LIBERO の判定。ちがいの説明は表の下。</p>
   <table>
     <tr>
       <th></th>
@@ -87,6 +87,36 @@
       <td class="num ok">B0 + A2 − A0 → B2<br>1/50<br><span class="note">公式 0</span></td>
     </tr>
   </table>
+  <h2>成功の数え方</h2>
+  <p>Franka は公式だけ。UR5e は公式より少しゆるい数え方も出す。</p>
+  <table>
+    <tr><th></th><th>公式</th><th>このページの数字（UR5e）</th></tr>
+    <tr>
+      <td>何を見るか</td>
+      <td>LIBERO の <code>check_success()</code>。BDDL が「指定した物がカゴの領域に入った」と認めたとき</td>
+      <td>公式 <b>または</b> 幾何の in_basket</td>
+    </tr>
+    <tr>
+      <td>in_basket</td>
+      <td>使わない</td>
+      <td>物の XY がカゴ中心から 10 cm 以内、開始から 5 cm 以上動いた、カゴ底より 1 cm 以上高い</td>
+    </tr>
+    <tr>
+      <td>ゆるさ</td>
+      <td>厳しい。縁に乗っている・まだつかんでいる、などだと缶がカゴに見えても失敗</td>
+      <td>見た目カゴに入っていれば拾う</td>
+    </tr>
+  </table>
+  <p>表で数字が二つあるマスは、こちらの数え方の方が多い。Franka（A0, A2 と、B の重みを Franka に載せたマス）は公式と同じなので括弧なし。</p>
+  <table>
+    <tr><th>マス</th><th>このページ</th><th>公式</th></tr>
+    <tr><td>B0 → B0</td><td>46</td><td>41</td></tr>
+    <tr><td>A0 → B0</td><td>13</td><td>12</td></tr>
+    <tr><td>A2 → B2</td><td>9</td><td>6</td></tr>
+    <tr><td>B2 + A0 − A2 → B0</td><td>1</td><td>0</td></tr>
+    <tr><td>B0 + A2 − A0 → B2</td><td>1</td><td>0</td></tr>
+  </table>
+
   <p>Arithmetic の中身は LoRA の足し引き。ベース重み <code>W</code> に対して <code>W' = W + 2 (B<sub>p</sub>A<sub>p</sub> + B<sub>q</sub>A<sub>q</sub> − B<sub>r</sub>A<sub>r</sub>)</code>。2 は α/r = 32/16。行き先のロボットで評価する。</p>
   <table>
     <tr><th>式</th><th>使う LoRA</th><th>評価先</th><th>成功</th></tr>
